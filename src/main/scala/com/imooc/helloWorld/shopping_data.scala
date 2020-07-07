@@ -1,11 +1,20 @@
 package com.imooc.helloWorld
+import java.text.SimpleDateFormat
+import java.util.Calendar
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.SparkConf
-//import org.apache.spark.ml.{Pipeline, PipelineStage}
-//import org.apache.spark.ml.feature.{OneHotEncoder, StringIndexer, VectorAssembler}
-//import scala.collection.mutable.ListBuffer
+import org.apache.spark.sql.functions._
 
 object shopping_data {
+
+  def get_yesterday(): String ={
+    val ymdFormat=new SimpleDateFormat("yyyy-MM-dd")
+    val day:Calendar = Calendar.getInstance()
+    day.add(Calendar.DATE,-1)
+    val logDate = ymdFormat.format(day.getTime)
+    logDate
+  }
+
   def main(args: Array[String]): Unit = {
     println("im in scala")
     // 初始化 spark 相关环境
@@ -24,47 +33,56 @@ object shopping_data {
     conf.set("spark.default.parallelism", "720")
     val spark = SparkSession.builder().config(conf).enableHiveSupport().getOrCreate()
 
+    val yesterday = get_yesterday()
+    spark.sql("set spark.sql.adaptive.enabled=true")
     val df = spark.sql(
-      """
-        |select goods_id as goods_id,
+      s"""
+        |select goods_id as goods_id,dt as dt,
         |    -- onehot --
         |    category_id as category_id,store_id as store_id,goods_classify,book_amount as book_amount,
         |    -- number --
         |    goods_weight as goods_weight,market_price as market_price,shop_price as shop_price,integral as integral,sell_number as sell_number,
         |    -- null to -1 --
         |    is_real as is_real,is_alone_sale as is_alone_sale,is_shipping as is_shipping,is_delete as is_delete,is_best as is_best,is_new as is_new,is_hot as is_hot,sell_top as sell_top,is_promote as is_promote,start_sale as start_sale,is_wap as is_wap,isshow as isshow,is_real_subscribe as is_real_subscribe
-        |        |  FROM coocaa_rds.rds_goods_dim where dt="2020-07-02"
-        |    limit 100
+        |       FROM coocaa_rds.rds_goods_dim where dt="${yesterday}"
       """.stripMargin)
 
-//    val df_fill_null = df.na.fill(-1)
-//
-//    /** onehot 编码处理*/
-//    val categoricalColumns = Array("category_id", "store_id", "goods_classify", "book_amount") // 要进行OneHotEncoder编码的字段
-//    val stagesArray = new ListBuffer[PipelineStage]() // 采用Pileline方式处理机器学习流程
-//    for (cate <- categoricalColumns) {
-//      val indexer = new StringIndexer().setInputCol(cate).setOutputCol(s"${cate}Index") // 使用StringIndexer 建立类别索引
-//      val encoder = new OneHotEncoder().setInputCol(indexer.getOutputCol).setOutputCol(s"${cate}classVec") // 使用OneHotEncoder将分类变量转换为二进制稀疏向量
-//      stagesArray.append(indexer,encoder)
-//    }
-//
-//    /** 合并所有特征为单个向量 */
-//    val numericCols = Array("goods_weight", "market_price", "shop_price","integral", "sell_number")
-//    val boolenCols = Array("is_real", "is_alone_sale", "is_shipping","is_delete", "is_best", "is_new","is_hot","sell_top","is_promote","start_sale","is_wap","isshow","is_real_subscribe")
-//    val assemblerInputs = categoricalColumns.map(_ + "classVec") ++ numericCols ++ boolenCols
-//    // 使用VectorAssembler将所有特征转换为一个向量
-//    val assembler = new VectorAssembler().setInputCols(assemblerInputs).setOutputCol("features")
-//    stagesArray.append(assembler)
-//
-//    // 以Pipeline的形式运行各个PipelineStage，训练并生成新的处理后的数据
-//    val pipeline = new Pipeline()
-//    pipeline.setStages(stagesArray.toArray)
-//    // fit() 根据需要计算特征统计信息
-//    val pipelineModel = pipeline.fit(df_fill_null)
-//    // transform() 真实转换特征
-//    val dataset = pipelineModel.transform(df_fill_null)
-//    dataset.show(false)
-//    println(dataset.count())
+    println(" ########### df ############### ")
+    df.show(5)
+    val df_fill_null = df.na.fill(-1)
+
+    println(" ########### df_null ############### ")
+    df.show(5)
+    // 合并不同列的数据为一列，同时筛选出所需要的列的数据
+    val ret = df_fill_null.select(
+      col("goods_id"),concat(
+        col("goods_weight"),lit(","),
+        col("market_price"),lit(","),
+        col("shop_price"),lit(","),
+        col("integral"),lit(","),
+        col("sell_number"),lit(","),
+        col("is_real"),lit(","),
+        col("is_alone_sale"),lit(","),
+        col("is_shipping"),lit(","),
+        col("is_delete"),lit(","),
+        col("is_best"),lit(","),
+        col("is_new"),lit(","),
+        col("is_hot"),lit(","),
+        col("sell_top"),lit(","),
+        col("is_promote"),lit(","),
+        col("start_sale"),lit(","),
+        col("is_wap"),lit(","),
+        col("isshow"),lit(","),
+        col("is_real_subscribe")
+      ).as("features"),col("dt")
+    )
+    // 处理旧的列的数据，生成新的一列数据 & 旧数据列的删除
+//    val emb_df = concatDF.withColumn("features",split(col("concat_emb"),","))
+//    val ret = emb_df.drop("concat_emb")
+    ret.printSchema()
+    println(" ########### ret ############### ")
+    ret.show(5)
+    ret.write.csv(s"/user/bigdata/embedding/eval/jiayuepeng/shopping/${yesterday}")
 
     spark.stop()
 
