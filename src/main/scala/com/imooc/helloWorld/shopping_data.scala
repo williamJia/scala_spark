@@ -16,7 +16,6 @@ object shopping_data {
   }
 
   def main(args: Array[String]): Unit = {
-    println("im in scala")
     // 初始化 spark 相关环境
     val conf = new SparkConf()
     conf.setAppName("getUserData")
@@ -54,7 +53,7 @@ object shopping_data {
     println(" ########### df_null ############### ")
     df.show(5)
     // 合并不同列的数据为一列，同时筛选出所需要的列的数据
-    val ret = df_fill_null.select(
+    val concatDF = df_fill_null.select(
       col("goods_id"),concat(
         col("goods_weight"),lit(","),
         col("market_price"),lit(","),
@@ -74,15 +73,15 @@ object shopping_data {
         col("is_wap"),lit(","),
         col("isshow"),lit(","),
         col("is_real_subscribe")
-      ).as("features"),col("dt")
+      ).as("concat_emb"),col("dt")
     )
     // 处理旧的列的数据，生成新的一列数据 & 旧数据列的删除
-//    val emb_df = concatDF.withColumn("features",split(col("concat_emb"),","))
-//    val ret = emb_df.drop("concat_emb")
+    val emb_df = concatDF.withColumn("features",split(col("concat_emb"),","))
+    val ret = emb_df.drop("concat_emb")
     ret.printSchema()
     println(" ########### ret ############### ")
     ret.show(5)
-    ret.write.csv(s"/user/bigdata/embedding/eval/jiayuepeng/shopping/${yesterday}")
+    ret.write.parquet(s"/user/bigdata/embedding/eval/jiayuepeng/parquet/shopping/${yesterday}")
 
     spark.stop()
 

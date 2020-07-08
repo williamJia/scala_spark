@@ -21,7 +21,7 @@ object changePaquetType {
 
     // 加载数据
     val embDF = spark.read.parquet("/user/bigdata/embedding/eval/jiayuepeng/se_vid_32dim_o/day=2020-06-29/se_embedding_part.parquet")
-    // 合并不同列的数据为一列，同时筛选出所需要的列的数据
+    // 合并不同列的数据为一列，同时筛选出所需要dd的列的数据
     val concat_embDF = embDF.select(
       concat(
         col("0"),lit(","),
