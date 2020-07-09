@@ -1,4 +1,5 @@
 type=command
-command=sh ../bin/shopping_data_process.sh
+command=sh ../bin/shopping_train.sh
 retries=0
 retry.backoff=30000
+dependencies=shopping

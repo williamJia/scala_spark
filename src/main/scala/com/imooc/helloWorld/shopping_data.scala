@@ -1,9 +1,11 @@
 package com.imooc.helloWorld
 import java.text.SimpleDateFormat
 import java.util.Calendar
+
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.DoubleType
 
 object shopping_data {
 
@@ -53,35 +55,59 @@ object shopping_data {
     println(" ########### df_null ############### ")
     df.show(5)
     // 合并不同列的数据为一列，同时筛选出所需要的列的数据
-    val concatDF = df_fill_null.select(
-      col("goods_id"),concat(
-        col("goods_weight"),lit(","),
-        col("market_price"),lit(","),
-        col("shop_price"),lit(","),
-        col("integral"),lit(","),
-        col("sell_number"),lit(","),
-        col("is_real"),lit(","),
-        col("is_alone_sale"),lit(","),
-        col("is_shipping"),lit(","),
-        col("is_delete"),lit(","),
-        col("is_best"),lit(","),
-        col("is_new"),lit(","),
-        col("is_hot"),lit(","),
-        col("sell_top"),lit(","),
-        col("is_promote"),lit(","),
-        col("start_sale"),lit(","),
-        col("is_wap"),lit(","),
-        col("isshow"),lit(","),
-        col("is_real_subscribe")
-      ).as("concat_emb"),col("dt")
+//    val concatDF = df_fill_null.select(
+//      col("goods_id"),concat(
+//        col("goods_weight"),lit(","),
+//        col("market_price"),lit(","),
+//        col("shop_price"),lit(","),
+//        col("integral"),lit(","),
+//        col("sell_number"),lit(","),
+//        col("is_real"),lit(","),
+//        col("is_alone_sale"),lit(","),
+//        col("is_shipping"),lit(","),
+//        col("is_delete"),lit(","),
+//        col("is_best"),lit(","),
+//        col("is_new"),lit(","),
+//        col("is_hot"),lit(","),
+//        col("sell_top"),lit(","),
+//        col("is_promote"),lit(","),
+//        col("start_sale"),lit(","),
+//        col("is_wap"),lit(","),
+//        col("isshow"),lit(","),
+//        col("is_real_subscribe")
+//      ).as("concat_emb"),col("dt")
+//    )
+//    // 处理旧的列的数据，生成新的一列数据 & 旧数据列的删除
+//    val emb_df = concatDF.withColumn("features",split(col("concat_emb"),","))
+//    val ret = emb_df.drop("concat_emb")
+
+    val ret = df_fill_null.select(
+        col("goods_id").cast(DoubleType),
+        col("goods_weight").cast(DoubleType),
+        col("market_price").cast(DoubleType),
+        col("shop_price").cast(DoubleType),
+        col("integral").cast(DoubleType),
+        col("sell_number").cast(DoubleType),
+        col("is_real").cast(DoubleType),
+        col("is_alone_sale").cast(DoubleType),
+        col("is_shipping").cast(DoubleType),
+        col("is_delete").cast(DoubleType),
+        col("is_best").cast(DoubleType),
+        col("is_new").cast(DoubleType),
+        col("is_hot").cast(DoubleType),
+        col("sell_top").cast(DoubleType),
+        col("is_promote").cast(DoubleType),
+        col("start_sale").cast(DoubleType),
+        col("is_wap").cast(DoubleType),
+        col("isshow").cast(DoubleType),
+        col("is_real_subscribe").cast(DoubleType),
+        col("dt").cast(DoubleType)
     )
-    // 处理旧的列的数据，生成新的一列数据 & 旧数据列的删除
-    val emb_df = concatDF.withColumn("features",split(col("concat_emb"),","))
-    val ret = emb_df.drop("concat_emb")
+
     ret.printSchema()
     println(" ########### ret ############### ")
     ret.show(5)
-    ret.write.parquet(s"/user/bigdata/embedding/eval/jiayuepeng/parquet/shopping/${yesterday}")
+    ret.write.parquet(s"/user/bigdata/embedding/eval/jiayuepeng/test/shopping/${yesterday}02")
 
     spark.stop()
 
