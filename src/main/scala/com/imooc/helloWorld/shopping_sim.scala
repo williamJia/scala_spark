@@ -6,9 +6,13 @@ import java.util.Calendar
 import breeze.linalg.DenseVector
 import breeze.numerics.{pow, sqrt}
 import org.apache.spark.SparkConf
-import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{ArrayType, DoubleType}
+import org.apache.spark.sql.expressions.Window
+
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 object shopping_sim {
 
@@ -20,23 +24,7 @@ object shopping_sim {
     logDate
   }
 
-//  def cos(po: Array[Double], pt: Array[Double]) = {
-//    val p1 = po.seq
-//    val p2 = pt.seq
-//    require(p1.size == p2.size)
-//
-//    val v1 = new DenseVector(p1.toArray)
-//    val v2 = new DenseVector(p2.toArray)
-//
-//    val a = sqrt(p1.map(pow(_, 2)).sum)
-//    val b = sqrt(p2.map(pow(_, 2)).sum)
-//
-//    val ab =  v1.t * v2
-//    ab / (a * b)
-//  }
-
   def cos(p1: Array[Double], p2: Array[Double]) = {
-//    require(p1.size == p2.size)
 
     val v1 = new DenseVector(p1)
     val v2 = new DenseVector(p2)
@@ -65,6 +53,7 @@ object shopping_sim {
     conf.set("spark.sql.broadcastTimeout","5400")
     conf.set("spark.default.parallelism", "720")
     val spark = SparkSession.builder().config(conf).enableHiveSupport().getOrCreate()
+    import spark.implicits._
 
     val yesterday = get_yesterday()
     val df = spark.read.parquet(s"/user/bigdata/embedding/eval/jiayuepeng/test/shopping/${yesterday}02")
@@ -98,23 +87,40 @@ object shopping_sim {
       ).as("concat_emb"),col("dt")
     )
     // 处理旧的列的数据，生成新的一列数据 & 旧数据列的删除
-    val emb_df = concatDF.withColumn("features",split(col("concat_emb"),","))
-    val arr_df = emb_df.drop("concat_emb").limit(10) // todo limit del
+    val emb_df = concatDF.withColumn("features",split(col("concat_emb"),",").cast(ArrayType(DoubleType)))
+    val arr_df = emb_df.drop("concat_emb")// .limit(10)
+
     val arr_df_copy = arr_df.as("arr_df_copy")
+    val array = arr_df.collect
+    val array_c = arr_df_copy.collect
 
-    var array = arr_df.collect
-    var array_c = arr_df_copy.collect
-
+    // 计算相似度
+    var ret_arr = ArrayBuffer[List[String]]()
     for(i <- 0 to array.length-1){
-      println(array(i)(0))
-      println(array(i)(2))
+      val p1:Array[Double] = array(i)(2).asInstanceOf[mutable.WrappedArray[Double]].toArray
       for(j <- 0 to array_c.length-1){
-        val p1:Array[Double] = array(i)(2).asInstanceOf[Array[Double]]
-        val p2:Array[Double] = array_c(j)(2).asInstanceOf[Array[Double]]
-        var value = cos(p1.seq,p2.seq)
-        println(value)
+        var row_arr = ArrayBuffer[String]()
+        val p2:Array[Double] = array_c(j)(2).asInstanceOf[mutable.WrappedArray[Double]].toArray
+        val value = cos(p1,p2)
+        row_arr += array(i)(0).toString
+        row_arr += array_c(j)(0).toString
+        row_arr += value.toString
+        ret_arr += row_arr.toList
       }
     }
 
+    // 格式化，分列，分组，排序，取TopN
+    val ret_df = ret_arr.toSeq.asInstanceOf[Seq[Seq[String]]]toDF()
+    val ret_col_df = ret_df.select( $"value" +: (0 until 3).map(i => $"value"(i).alias(s"col$i")): _* ).drop("value")
+    val w = Window.partitionBy($"col0").orderBy($"col2".desc)
+    val dfTop3 = ret_col_df.withColumn("rn", row_number().over(w)).where($"rn" <= 3).drop("rn")
+    // 合并相同id的数据，逗号间隔
+    dfTop3.createOrReplaceTempView("test")
+    val df_concat = spark.sql("select col0 as id,concat_ws(',',collect_set(col1)) as other_ids from test group by col0")
+    println("#############")
+    df_concat.show(10)
+    df_concat.printSchema()
+    println(df_concat.count())
+    df_concat.write.parquet(s"/user/bigdata/embedding/eval/jiayuepeng/test/shop_sim/recal/${yesterday}")
   }
 }
