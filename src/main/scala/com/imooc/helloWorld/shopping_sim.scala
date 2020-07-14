@@ -40,7 +40,7 @@ object shopping_sim {
 
     // 初始化 spark 相关环境
     val conf = new SparkConf()
-    conf.setAppName("getUserData")
+    conf.setAppName("shopping_sim")
     conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     conf.set("spark.rdd.compress", "true")
     conf.set("spark.speculation.interval", "10000ms")
@@ -58,13 +58,16 @@ object shopping_sim {
     val yesterday = get_yesterday()
     val df = spark.read.parquet(s"/user/bigdata/embedding/eval/jiayuepeng/test/shopping/${yesterday}02")
 
+    val df1 = df.orderBy(df("goods_id").asc).limit(2000)
+    val df2 = df.orderBy(df("goods_id").desc).limit(8300) // todo
+
     // 格式转换，统一输出集中到一列 vector 类型
 //    val arr = Array("goods_weight","market_price","shop_price","integral","sell_number","is_real","is_alone_sale","is_shipping","is_delete","is_best","is_new","is_hot","sell_top","is_promote","start_sale","is_wap","isshow","is_real_subscribe")
 //    val assembler = new VectorAssembler().setInputCols(arr).setOutputCol("features")
 //    val ssembled_df = assembler.transform(df)
 
     // 数据整合到一列，遍历每条数据的此列，两两计算相似度
-    val concatDF = df.select(
+    val concatDF = df1.select(
         col("goods_id"),concat(
         col("goods_weight"),lit(","),
         col("market_price"),lit(","),

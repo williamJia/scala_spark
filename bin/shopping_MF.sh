@@ -5,9 +5,9 @@ echo "work directory:"${base_dir}
 run_cmd="--master yarn-client \
 --driver-memory 8g \
 --executor-memory 8g \
---num-executors 8 \
---executor-cores 8 \
---class com.imooc.helloWorld.shopping_sim ${base_dir}/scala_project-1.0-SNAPSHOT.jar"
+--num-executors 10 \
+--executor-cores 4 \
+--class com.imooc.helloWorld.shop_matix_process.matrixFactorization ${base_dir}/scala_project-1.0-SNAPSHOT.jar"
 #echo ${run_cmd}
 #/usr/hdp/current/spark2-client/bin/spark-submit ${run_cmd}
 echo "over"

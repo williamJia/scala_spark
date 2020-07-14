@@ -3,9 +3,9 @@ base_dir=$(cd `dirname ../../`; pwd)
 echo "work directory:"${base_dir}
 # Process data
 run_cmd="--master yarn-client \
---driver-memory 4g \
---executor-memory 8g \
---num-executors 10 \
+--driver-memory 8g \
+--executor-memory 16g \
+--num-executors 4 \
 --executor-cores 4 \
 --class com.imooc.helloWorld.shopping_data ${base_dir}/scala_project-1.0-SNAPSHOT.jar"
 #echo ${run_cmd}

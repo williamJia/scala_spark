@@ -20,7 +20,7 @@ object shopping_data {
   def main(args: Array[String]): Unit = {
     // 初始化 spark 相关环境
     val conf = new SparkConf()
-    conf.setAppName("getUserData")
+    conf.setAppName("shopping_data")
     conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     conf.set("spark.rdd.compress", "true")
     conf.set("spark.speculation.interval", "10000ms")
@@ -54,6 +54,7 @@ object shopping_data {
 
     println(" ########### df_null ############### ")
     df.show(5)
+    println(df.count())
     // 合并不同列的数据为一列，同时筛选出所需要的列的数据
 //    val concatDF = df_fill_null.select(
 //      col("goods_id"),concat(
