@@ -1,0 +1,4 @@
+type=command
+command=sh ../bin/move_hdfs2hive.sh
+retries=0
+retry.backoff=30000

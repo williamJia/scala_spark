@@ -58,7 +58,7 @@ object shopping_sim {
     val yesterday = get_yesterday()
     val df = spark.read.parquet(s"/user/bigdata/embedding/eval/jiayuepeng/test/shopping/${yesterday}02")
 
-    val df1 = df.orderBy(df("goods_id").asc).limit(2000)
+    val df1 = df.orderBy(df("goods_id").asc).limit(1000)
     val df2 = df.orderBy(df("goods_id").desc).limit(8300) // todo
 
     // 格式转换，统一输出集中到一列 vector 类型
